@@ -115,6 +115,7 @@ def generatorForH5py(data_mappings, chunk_size=32):
     This function batches the data for saving to the H5 file
     """
     for chunk_id in range(0, len(data_mappings), chunk_size):
+        # print(chunk_id, len(data_mappings))
         # Data is expected to be a dict of <image: (label, previousious_state)>
         # Extract the parts
         data_chunk = data_mappings[chunk_id:chunk_id + chunk_size]
@@ -126,21 +127,33 @@ def generatorForH5py(data_mappings, chunk_size=32):
             #Flatten and yield as tuple
             yield (image_names_chunk, labels_chunk.astype(float), previous_state_chunk.astype(float))
             if chunk_id + chunk_size > len(data_mappings):
-                raise StopIteration
-    raise StopIteration
+                return
+                #raise StopIteration
+    #raise StopIteration
     
 def saveH5pyData(data_mappings, target_file_path):
     """
     Saves H5 data to file
     """
     chunk_size = 32
+    print('saveh5 dbg')
     gen = generatorForH5py(data_mappings,chunk_size)
+#    try:
+#        for image_names_chunk, label_chunk, previous_state_chunk in gen:
+#            print('gen ', image_names_chunk)
+#    except StopIteration:
+#        print("stopiteration caught1")
 
-    image_names_chunk, labels_chunk, previous_state_chunk = next(gen)
+#    print('saveh5 safe')
+    try:
+        image_names_chunk, labels_chunk, previous_state_chunk = next(gen)
+    except StopIteration:
+        print("stopiteration caught2")    
+        
     images_chunk = np.asarray(readImagesFromPath(image_names_chunk))
     row_count = images_chunk.shape[0]
 
-    checkAndCreateDir(target_file_path)
+    #checkAndCreateDir(target_file_path)
     with h5py.File(target_file_path, 'w') as f:
 
         # Initialize a resizable dataset to hold the output
@@ -162,6 +175,7 @@ def saveH5pyData(data_mappings, target_file_path):
         dset_previous_state[:] = previous_state_chunk
 
         for image_names_chunk, label_chunk, previous_state_chunk in gen:
+            #print('gen ', image_names_chunk)
             image_chunk = np.asarray(readImagesFromPath(image_names_chunk))
             
             # Resize the dataset to accommodate the next chunk of rows
@@ -185,7 +199,7 @@ def cook(folders, output_directory, train_eval_test_split):
                 train_eval_test_split: dataset split ratio
     """
     output_files = [os.path.join(output_directory, f) for f in ['train.h5', 'eval.h5', 'test.h5']]
-    if (any([os.path.isfile(f) for f in output_files])):
+    if False: # (any([os.path.isfile(f) for f in output_files])): # force processing anyway, 12/19/20
        print("Preprocessed data already exists at: {0}. Skipping preprocessing.".format(output_directory))
 
     else:
